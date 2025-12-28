@@ -34,6 +34,7 @@ func _init(connection: StreamPeerTCP):
 	_connection.set_no_delay(true)
 	_reactor = TrimsockTCPClientReactor.new(connection)
 
+	
 ## Poll the client
 func poll() -> void:
 	_reactor.poll()

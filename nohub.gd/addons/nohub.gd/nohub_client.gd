@@ -211,3 +211,84 @@ func _command_to_error(command: TrimsockCommand) -> NohubResult:
 		return NohubResult.of_error(command.params[0], command.params[1])
 	else:
 		return NohubResult.of_error(command.name, "")
+
+#region WebRTC
+
+# TODO: Determine the best place to define these signals. They are used in the browser
+signal signal_webrtc_create_new_peer_connection(id)
+signal signal_webrtc_message(type, data)
+
+func _session_id(length: int = 4) -> String:
+	const charset := "abcdefghijklmnopqrstuvwxyz" + "ABCDEFGHIJKLMNOPQRSTUVWXYZ" + "0123456789"
+	var id := ""
+	for i in length:
+		id += charset[randi() % charset.length()]
+	return id
+
+
+## Start lobby, kicking off joining
+## [br][br]
+## Only the lobby's owner can start the lobby. 
+func start_lobby(lobby_id: String) -> NohubResult.LobbyMessage:
+	var request := TrimsockCommand.request("webrtc/lobby/start") \
+		.with_params([lobby_id])
+
+	var xchg: TrimsockExchange = _get_reactor().submit_request(request)
+	var response := await xchg.read()
+
+	if response.is_success():
+		return NohubResult.LobbyMessage.of_value(response.params[0])
+	else:
+		return _command_to_error(response)
+
+## Leave the lobby
+## [br][br]
+func leave_lobby(lobby_id: String) -> NohubResult.LobbyMessage:
+	var request := TrimsockCommand.request("lobby/leave") \
+		.with_params([lobby_id])
+
+	var xchg: TrimsockExchange = _get_reactor().submit_request(request)
+	var response := await xchg.read()
+
+	if response.is_success():
+		return NohubResult.LobbyMessage.of_value(response.params[0])
+	else:
+		return _command_to_error(response)
+
+func get_session() -> String:
+	var request := TrimsockCommand.request("getid")
+	var xchg: TrimsockExchange = _get_reactor().submit_request(request)
+	var response := await xchg.read()
+	if response.is_success():
+		return response.text
+	else:
+		return ""
+
+enum WEBRTC_ACTION {
+	Offer,
+	Answer,
+	Candidate
+}
+
+func send_webrtc_message(type: WEBRTC_ACTION, id: String, data: Dictionary = {}) -> NohubResult:
+	var request
+
+	match type:
+		WEBRTC_ACTION.Offer:
+			request = TrimsockCommand.request("webrtc/offer").with_params([id])
+		WEBRTC_ACTION.Answer:
+			request = TrimsockCommand.request("webrtc/answer").with_params([id])
+		WEBRTC_ACTION.Candidate:
+			request = TrimsockCommand.request("webrtc/candidate").with_params([id])
+
+	request.with_kv_map(data)
+
+	var xchg: TrimsockExchange = _get_reactor().submit_request(request)
+	var response := await xchg.read()
+
+	if response.is_success():
+		return NohubResult.LobbyMessage.of_value('send success')
+	else:
+		return _command_to_error(response)
+
+#endregion
