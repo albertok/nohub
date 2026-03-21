@@ -24,7 +24,7 @@ export class WebSocketModule implements Module {
       return;
     }
 
-    this.startWebSocketServer();
+    this.startWebSocketServer().catch((err) => this.logger.error(err, "Failed to start WebSocket server"));
   }
 
   private async startWebSocketServer() {
