@@ -34,6 +34,7 @@ export class WebSocketModule implements Module {
 
     const tcpHost = this.nohub.config.tcp.host === "*" ? "localhost" : this.nohub.config.tcp.host;
     const tcpPort = this.nohub.config.tcp.port;
+    const logger = this.logger;
 
     this.server = Bun.serve({
       hostname: this.config.host === "*" ? undefined : this.config.host,
@@ -68,7 +69,7 @@ export class WebSocketModule implements Module {
                   }
                 },
                 error(socket, error) {
-                  rootLogger.error({ error }, "TCP socket error in WebSocket proxy");
+                  logger.error({ error }, "TCP socket error in WebSocket proxy");
                   ws.close();
                 },
                 close(socket) {
@@ -84,9 +85,9 @@ export class WebSocketModule implements Module {
               buffer: []
             };
 
-            rootLogger.debug("WebSocket client connected, TCP bridge established");
+            logger.debug("WebSocket client connected, TCP bridge established");
           } catch (error) {
-            rootLogger.error({ error }, "Failed to establish TCP connection for WebSocket client");
+            logger.error({ error }, "Failed to establish TCP connection for WebSocket client");
             ws.close();
           }
         },
@@ -106,7 +107,7 @@ export class WebSocketModule implements Module {
               
               ws.data.tcpSocket.write(data);
             } catch (error) {
-              rootLogger.error({ error }, "Failed to forward WebSocket message to TCP");
+              logger.error({ error }, "Failed to forward WebSocket message to TCP");
               ws.close();
             }
           }
@@ -118,14 +119,14 @@ export class WebSocketModule implements Module {
             try {
               ws.data.tcpSocket.end();
             } catch (error) {
-              rootLogger.error({ error }, "Error closing TCP socket");
+              logger.error({ error }, "Error closing TCP socket");
             }
           }
-          rootLogger.debug("WebSocket client disconnected");
+          logger.debug("WebSocket client disconnected");
         },
 
         error(ws: ServerWebSocket<WebSocketData>, error) {
-          rootLogger.error({ error }, "WebSocket error");
+          logger.error({ error }, "WebSocket error");
           if (ws.data?.tcpSocket) {
             try {
               ws.data.tcpSocket.end();
